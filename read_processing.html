@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" />
-<title>read_processing</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>upstream_pipeline</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 
 <style type="text/css">
@@ -11782,7 +11782,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[115]:</div>
+<div class="prompt input_prompt">In&nbsp;[166]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">threading</span> <span class="k">import</span> <span class="n">Thread</span>
@@ -11791,9 +11791,326 @@ div#notebook {
 <span class="kn">import</span> <span class="nn">signal</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">bokeh.plotting</span> <span class="k">import</span> <span class="n">figure</span>
+<span class="kn">from</span> <span class="nn">bokeh.io</span> <span class="k">import</span> <span class="n">show</span><span class="p">,</span> <span class="n">output_notebook</span><span class="p">,</span> <span class="n">push_notebook</span>
+<span class="kn">from</span> <span class="nn">bokeh.models</span> <span class="k">import</span> <span class="n">ColumnDataSource</span><span class="p">,</span> <span class="n">CDSView</span>
+<span class="kn">from</span> <span class="nn">bokeh.transform</span> <span class="k">import</span> <span class="n">factor_cmap</span>
+<span class="kn">from</span> <span class="nn">bokeh.palettes</span> <span class="k">import</span> <span class="n">brewer</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+
+<span class="n">output_notebook</span><span class="p">()</span>
 </pre></div>
 
 </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+
+<div class="output_html rendered_html output_subarea ">
+
+    <div class="bk-root">
+        <a href="https://bokeh.pydata.org" target="_blank" class="bk-logo bk-logo-small bk-logo-notebook"></a>
+        <span id="28741">Loading BokehJS ...</span>
+    </div>
+</div>
+
+</div>
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+
+
+
+<div id="96a13a27-e086-438f-b841-d74861ae87a9"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#96a13a27-e086-438f-b841-d74861ae87a9');
+
+(function(root) {
+  function now() {
+    return new Date();
+  }
+
+  var force = true;
+
+  if (typeof (root._bokeh_onload_callbacks) === "undefined" || force === true) {
+    root._bokeh_onload_callbacks = [];
+    root._bokeh_is_loading = undefined;
+  }
+
+  var JS_MIME_TYPE = 'application/javascript';
+  var HTML_MIME_TYPE = 'text/html';
+  var EXEC_MIME_TYPE = 'application/vnd.bokehjs_exec.v0+json';
+  var CLASS_NAME = 'output_bokeh rendered_html';
+
+  /**
+   * Render data to the DOM node
+   */
+  function render(props, node) {
+    var script = document.createElement("script");
+    node.appendChild(script);
+  }
+
+  /**
+   * Handle when an output is cleared or removed
+   */
+  function handleClearOutput(event, handle) {
+    var cell = handle.cell;
+
+    var id = cell.output_area._bokeh_element_id;
+    var server_id = cell.output_area._bokeh_server_id;
+    // Clean up Bokeh references
+    if (id != null && id in Bokeh.index) {
+      Bokeh.index[id].model.document.clear();
+      delete Bokeh.index[id];
+    }
+
+    if (server_id !== undefined) {
+      // Clean up Bokeh references
+      var cmd = "from bokeh.io.state import curstate; print(curstate().uuid_to_server['" + server_id + "'].get_sessions()[0].document.roots[0]._id)";
+      cell.notebook.kernel.execute(cmd, {
+        iopub: {
+          output: function(msg) {
+            var id = msg.content.text.trim();
+            if (id in Bokeh.index) {
+              Bokeh.index[id].model.document.clear();
+              delete Bokeh.index[id];
+            }
+          }
+        }
+      });
+      // Destroy server and session
+      var cmd = "import bokeh.io.notebook as ion; ion.destroy_server('" + server_id + "')";
+      cell.notebook.kernel.execute(cmd);
+    }
+  }
+
+  /**
+   * Handle when a new output is added
+   */
+  function handleAddOutput(event, handle) {
+    var output_area = handle.output_area;
+    var output = handle.output;
+
+    // limit handleAddOutput to display_data with EXEC_MIME_TYPE content only
+    if ((output.output_type != "display_data") || (!output.data.hasOwnProperty(EXEC_MIME_TYPE))) {
+      return
+    }
+
+    var toinsert = output_area.element.find("." + CLASS_NAME.split(' ')[0]);
+
+    if (output.metadata[EXEC_MIME_TYPE]["id"] !== undefined) {
+      toinsert[toinsert.length - 1].firstChild.textContent = output.data[JS_MIME_TYPE];
+      // store reference to embed id on output_area
+      output_area._bokeh_element_id = output.metadata[EXEC_MIME_TYPE]["id"];
+    }
+    if (output.metadata[EXEC_MIME_TYPE]["server_id"] !== undefined) {
+      var bk_div = document.createElement("div");
+      bk_div.innerHTML = output.data[HTML_MIME_TYPE];
+      var script_attrs = bk_div.children[0].attributes;
+      for (var i = 0; i < script_attrs.length; i++) {
+        toinsert[toinsert.length - 1].firstChild.setAttribute(script_attrs[i].name, script_attrs[i].value);
+      }
+      // store reference to server id on output_area
+      output_area._bokeh_server_id = output.metadata[EXEC_MIME_TYPE]["server_id"];
+    }
+  }
+
+  function register_renderer(events, OutputArea) {
+
+    function append_mime(data, metadata, element) {
+      // create a DOM node to render to
+      var toinsert = this.create_output_subarea(
+        metadata,
+        CLASS_NAME,
+        EXEC_MIME_TYPE
+      );
+      this.keyboard_manager.register_events(toinsert);
+      // Render to node
+      var props = {data: data, metadata: metadata[EXEC_MIME_TYPE]};
+      render(props, toinsert[toinsert.length - 1]);
+      element.append(toinsert);
+      return toinsert
+    }
+
+    /* Handle when an output is cleared or removed */
+    events.on('clear_output.CodeCell', handleClearOutput);
+    events.on('delete.Cell', handleClearOutput);
+
+    /* Handle when a new output is added */
+    events.on('output_added.OutputArea', handleAddOutput);
+
+    /**
+     * Register the mime type and append_mime function with output_area
+     */
+    OutputArea.prototype.register_mime_type(EXEC_MIME_TYPE, append_mime, {
+      /* Is output safe? */
+      safe: true,
+      /* Index of renderer in `output_area.display_order` */
+      index: 0
+    });
+  }
+
+  // register the mime type if in Jupyter Notebook environment and previously unregistered
+  if (root.Jupyter !== undefined) {
+    var events = require('base/js/events');
+    var OutputArea = require('notebook/js/outputarea').OutputArea;
+
+    if (OutputArea.prototype.mime_types().indexOf(EXEC_MIME_TYPE) == -1) {
+      register_renderer(events, OutputArea);
+    }
+  }
+
+  
+  if (typeof (root._bokeh_timeout) === "undefined" || force === true) {
+    root._bokeh_timeout = Date.now() + 5000;
+    root._bokeh_failed_load = false;
+  }
+
+  var NB_LOAD_WARNING = {'data': {'text/html':
+     "<div style='background-color: #fdd'>\n"+
+     "<p>\n"+
+     "BokehJS does not appear to have successfully loaded. If loading BokehJS from CDN, this \n"+
+     "may be due to a slow or bad network connection. Possible fixes:\n"+
+     "</p>\n"+
+     "<ul>\n"+
+     "<li>re-rerun `output_notebook()` to attempt to load from CDN again, or</li>\n"+
+     "<li>use INLINE resources instead, as so:</li>\n"+
+     "</ul>\n"+
+     "<code>\n"+
+     "from bokeh.resources import INLINE\n"+
+     "output_notebook(resources=INLINE)\n"+
+     "</code>\n"+
+     "</div>"}};
+
+  function display_loaded() {
+    var el = document.getElementById("28741");
+    if (el != null) {
+      el.textContent = "BokehJS is loading...";
+    }
+    if (root.Bokeh !== undefined) {
+      if (el != null) {
+        el.textContent = "BokehJS " + root.Bokeh.version + " successfully loaded.";
+      }
+    } else if (Date.now() < root._bokeh_timeout) {
+      setTimeout(display_loaded, 100)
+    }
+  }
+
+
+  function run_callbacks() {
+    try {
+      root._bokeh_onload_callbacks.forEach(function(callback) { callback() });
+    }
+    finally {
+      delete root._bokeh_onload_callbacks
+    }
+    console.info("Bokeh: all callbacks have finished");
+  }
+
+  function load_libs(js_urls, callback) {
+    root._bokeh_onload_callbacks.push(callback);
+    if (root._bokeh_is_loading > 0) {
+      console.log("Bokeh: BokehJS is being loaded, scheduling callback at", now());
+      return null;
+    }
+    if (js_urls == null || js_urls.length === 0) {
+      run_callbacks();
+      return null;
+    }
+    console.log("Bokeh: BokehJS not loaded, scheduling load and callback at", now());
+    root._bokeh_is_loading = js_urls.length;
+    for (var i = 0; i < js_urls.length; i++) {
+      var url = js_urls[i];
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = false;
+      s.onreadystatechange = s.onload = function() {
+        root._bokeh_is_loading--;
+        if (root._bokeh_is_loading === 0) {
+          console.log("Bokeh: all BokehJS libraries loaded");
+          run_callbacks()
+        }
+      };
+      s.onerror = function() {
+        console.warn("failed to load library " + url);
+      };
+      console.log("Bokeh: injecting script tag for BokehJS library: ", url);
+      document.getElementsByTagName("head")[0].appendChild(s);
+    }
+  };var element = document.getElementById("28741");
+  if (element == null) {
+    console.log("Bokeh: ERROR: autoload.js configured with elementid '28741' but no matching script tag was found. ")
+    return false;
+  }
+
+  var js_urls = ["https://cdn.pydata.org/bokeh/release/bokeh-1.0.1.min.js", "https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.1.min.js", "https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.1.min.js", "https://cdn.pydata.org/bokeh/release/bokeh-gl-1.0.1.min.js"];
+
+  var inline_js = [
+    function(Bokeh) {
+      Bokeh.set_log_level("info");
+    },
+    
+    function(Bokeh) {
+      
+    },
+    function(Bokeh) {
+      console.log("Bokeh: injecting CSS: https://cdn.pydata.org/bokeh/release/bokeh-1.0.1.min.css");
+      Bokeh.embed.inject_css("https://cdn.pydata.org/bokeh/release/bokeh-1.0.1.min.css");
+      console.log("Bokeh: injecting CSS: https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.1.min.css");
+      Bokeh.embed.inject_css("https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.1.min.css");
+      console.log("Bokeh: injecting CSS: https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.1.min.css");
+      Bokeh.embed.inject_css("https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.1.min.css");
+    }
+  ];
+
+  function run_inline_js() {
+    
+    if ((root.Bokeh !== undefined) || (force === true)) {
+      for (var i = 0; i < inline_js.length; i++) {
+        inline_js[i].call(root, root.Bokeh);
+      }if (force === true) {
+        display_loaded();
+      }} else if (Date.now() < root._bokeh_timeout) {
+      setTimeout(run_inline_js, 100);
+    } else if (!root._bokeh_failed_load) {
+      console.log("Bokeh: BokehJS failed to load within specified timeout.");
+      root._bokeh_failed_load = true;
+    } else if (force !== true) {
+      var cell = $(document.getElementById("28741")).parents('.cell').data().cell;
+      cell.output_area.append_execute_result(NB_LOAD_WARNING)
+    }
+
+  }
+
+  if (root._bokeh_is_loading === 0) {
+    console.log("Bokeh: BokehJS loaded, going straight to plotting");
+    run_inline_js();
+  } else {
+    load_libs(js_urls, function() {
+      console.log("Bokeh: BokehJS plotting callback run at", now());
+      run_inline_js();
+    });
+  }
+}(window));
+</script>
+</div>
+
+</div>
+
 </div>
 </div>
 
@@ -11808,19 +12125,63 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[117]:</div>
+<div class="prompt input_prompt">In&nbsp;[174]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">fastq_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/cap_binding_pulldown/profiling/fastq/&quot;</span>
-<span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/profiling_pipeline/sample_data&quot;</span>
-<span class="n">available_cores</span> <span class="o">=</span> <span class="mi">96</span>
-<span class="n">star_ncRNA_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/reference_genome/STAR_index_ncRNA/&quot;</span>
-<span class="n">star_genome_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/reference_genome/STAR_index_ncRNA/&quot;</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#set paths/parameters</span>
+<span class="n">fastq_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/siRNA_profiling/FASTQ/&quot;</span>
+<span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/profiling_pipeline/sample_data/&quot;</span>
+<span class="n">available_cores</span> <span class="o">=</span> <span class="mi">96</span> <span class="c1">#TODO:deal with situation if threads are fewer than number of samples.</span>
+<span class="n">star_ncRNA_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/reference_genome/boris_profiling_annotations/hg38_Anno_BZ/ncRNA_STAR&quot;</span>
+<span class="n">star_genome_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/reference_genome/STAR_index/&quot;</span>
+<span class="n">star_reporter_dir</span> <span class="o">=</span> <span class="s2">&quot;/home/anthony/siRNA_profiling/reporter_fasta/reporter_STAR_index/&quot;</span> <span class="c1"># if no reporter, set to False</span>
 
 <span class="n">fastq_dir</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">fastq_dir</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
 <span class="n">output_dir</span> <span class="o">+=</span> <span class="s2">&quot;/&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">output_dir</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+</pre></div>
 
-<span class="c1">#set up folder structure for output</span>
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[175]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#rename fasta files</span>
+<span class="n">barcode_name_mapping</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;GCCAAT&quot;</span><span class="p">:</span><span class="s2">&quot;ASCC3&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CAGATC&quot;</span><span class="p">:</span><span class="s2">&quot;ASCC2-TRIP4&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ACTTGA&quot;</span><span class="p">:</span><span class="s2">&quot;ASCC3-ASCC2-TRIP4-ZNF598&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;GATCAG&quot;</span><span class="p">:</span><span class="s2">&quot;Scrambled&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;GGCTAC&quot;</span><span class="p">:</span><span class="s2">&quot;Mock&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">files</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">fastq_dir</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;(.+)(\.fastq|\.fastq\.gz)$&quot;</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">barcode</span> <span class="ow">in</span> <span class="n">barcode_name_mapping</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">barcode</span> <span class="ow">in</span> <span class="n">prefix</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">fastq_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="n">file</span><span class="p">,</span> <span class="n">fastq_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="n">barcode_name_mapping</span><span class="p">[</span><span class="n">barcode</span><span class="p">]</span><span class="o">+</span><span class="n">suffix</span><span class="p">)</span>
+                <span class="k">break</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[176]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#set up folder structure for output</span>
 <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">F_OK</span><span class="p">):</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">F_OK</span><span class="p">):</span>
         <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
@@ -11830,6 +12191,8 @@ div#notebook {
         <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/output/deduplicated&quot;</span><span class="p">)</span>
         <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/output/trimmed&quot;</span><span class="p">)</span>
         <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/output/ncRNA_aligned&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">star_reporter_dir</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/output/reporter_aligned&quot;</span><span class="p">)</span>
         <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/output/genome_aligned&quot;</span><span class="p">)</span>
     <span class="n">output_dir</span> <span class="o">+=</span> <span class="s2">&quot;output/&quot;</span>
 <span class="k">else</span><span class="p">:</span>
@@ -11868,11 +12231,13 @@ div#notebook {
 
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Ready to process files:
-		CAGATC.fastq.gz
-		GCAGCT.fastq.gz
-		ATCAGT.fastq
+		ASCC2-TRIP4.fastq.gz
+		ASCC3-ASCC2-TRIP4-ZNF598.fastq.gz
+		Mock.fastq.gz
+		Scrambled.fastq.gz
+		ASCC3.fastq.gz
 
-Using 32/96 cores for each sample.
+Using 19/96 cores for each sample.
 Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 </pre>
 </div>
@@ -11892,7 +12257,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[118]:</div>
+<div class="prompt input_prompt">In&nbsp;[177]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#defines process handler for running one sample through the pipeline</span>
@@ -11903,6 +12268,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 <span class="sd">    </span>
 <span class="sd">    It also uses a simple text log to pick up where the sample left off if the pipeline </span>
 <span class="sd">    fails. This log is stored in .../output/logs/pipeline_completion/</span>
+<span class="sd">    Steps are defined in self.steps</span>
 <span class="sd">    </span>
 <span class="sd">    The self.check method will terminate the run and kill all running process groups if</span>
 <span class="sd">    one of the processes in this thread returns an exit code other than 0, or if any</span>
@@ -11912,17 +12278,23 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 <span class="sd">    </span>
 <span class="sd">    On completion, each thread will add one to the global samples_done counter, to </span>
 <span class="sd">    let the main thread know when all are finished.</span>
+<span class="sd">    </span>
+<span class="sd">    TODO:use queues/messages instead of changing global variables</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
         <span class="k">global</span> <span class="n">kill_pipeline</span>
         <span class="k">global</span> <span class="n">samples_done</span>
         <span class="k">global</span> <span class="n">star_ncRNA_dir</span>
         <span class="k">global</span> <span class="n">star_genome_dir</span>
+        <span class="k">global</span> <span class="n">star_reporter_dir</span>
         <span class="k">global</span> <span class="n">fastq_dir</span>
         <span class="k">global</span> <span class="n">output_dir</span>
         <span class="k">global</span> <span class="n">numcores</span>
+        <span class="k">global</span> <span class="n">failed_sample</span>
+        <span class="k">global</span> <span class="n">thread_tracker</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">star_ncRNA_dir</span> <span class="o">=</span> <span class="n">star_ncRNA_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">star_genome_dir</span> <span class="o">=</span> <span class="n">star_genome_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">star_reporter_dir</span> <span class="o">=</span> <span class="n">star_reporter_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fastq_dir</span> <span class="o">=</span> <span class="n">fastq_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir</span>
@@ -11931,14 +12303,22 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
         <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;(.+)(\.fastq|\.fastq\.gz)$&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">suffix</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;initiate&quot;</span><span class="p">,</span> <span class="s2">&quot;deduplicate&quot;</span><span class="p">,</span> <span class="s2">&quot;trim&quot;</span><span class="p">,</span> <span class="s2">&quot;align_ncRNA&quot;</span><span class="p">,</span> <span class="s2">&quot;align_genome&quot;</span><span class="p">,</span> <span class="s2">&quot;sort&quot;</span><span class="p">,</span> <span class="s2">&quot;index&quot;</span><span class="p">]</span> 
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">thread_tracker</span><span class="p">:</span>
+            <span class="n">thread_tracker</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;initiate&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">star_reporter_dir</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;initiate&quot;</span><span class="p">,</span> <span class="s2">&quot;deduplicate&quot;</span><span class="p">,</span> <span class="s2">&quot;trim&quot;</span><span class="p">,</span> <span class="s2">&quot;align_ncRNA&quot;</span><span class="p">,</span> <span class="s2">&quot;align_reporter&quot;</span><span class="p">,</span> <span class="s2">&quot;remove_reverse_reads&quot;</span><span class="p">,</span> <span class="s2">&quot;sort_reporter_aligned&quot;</span><span class="p">,</span> 
+                          <span class="s2">&quot;index_reporter_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;align_genome&quot;</span><span class="p">,</span> <span class="s2">&quot;sort_genome_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;index_genome_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;done&quot;</span><span class="p">]</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;initiate&quot;</span><span class="p">,</span> <span class="s2">&quot;deduplicate&quot;</span><span class="p">,</span> <span class="s2">&quot;trim&quot;</span><span class="p">,</span> <span class="s2">&quot;align_ncRNA&quot;</span><span class="p">,</span> <span class="s2">&quot;align_genome&quot;</span><span class="p">,</span> 
+                          <span class="s2">&quot;sort_genome_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;index_genome_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;done&quot;</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;logs/pipeline_completion/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_completion_log.txt&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">F_OK</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;logs/pipeline_completion/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_completion_log.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;initiate</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">completion</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/logs/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_completion_log.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="o">.</span><span class="n">readlines</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;current_step&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;logs/pipeline_completion/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_completion_log.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="o">.</span><span class="n">readlines</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+                <span class="n">thread_tracker</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_step</span><span class="p">]</span>
         
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/logs/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_stdout.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> \
             <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;/logs/pipeline_completion/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_completion_log.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="p">:</span>
@@ -11949,12 +12329,23 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
                 <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">align_ncRNA</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">star_reporter_dir</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">align_reporter</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samtools_remove_rv_reads</span><span class="p">(</span><span class="s2">&quot;reporter_aligned&quot;</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samtools_sort</span><span class="p">(</span><span class="s2">&quot;reporter_aligned&quot;</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samtools_index</span><span class="p">(</span><span class="s2">&quot;reporter_aligned&quot;</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">align_genome</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samtools_sort</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samtools_sort</span><span class="p">(</span><span class="s2">&quot;genome_aligned&quot;</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samtools_index</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samtools_index</span><span class="p">(</span><span class="s2">&quot;genome_aligned&quot;</span><span class="p">,</span> <span class="n">numcores</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proc</span><span class="p">)</span>
+                <span class="c1">#thread_tracker[self.prefix] = &quot;done&quot;</span>
+                <span class="c1">#self.completion.write(&quot;done.\n&quot;)</span>
                 <span class="n">samples_done</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">except</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">=</span> <span class="kc">True</span>
@@ -11970,7 +12361,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
         <span class="sd">&#39;&#39;&#39;deduplicate ribosome profiling reads using dedupe.sh from </span>
 <span class="sd">        the BBTools suite.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;deduplicate&quot;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Deduplicate</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
             <span class="n">dedupe_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;deduplicated/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
@@ -11984,6 +12375,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
                 <span class="s2">&quot;absorbcontainment=f&quot;</span><span class="p">,</span> <span class="c1">#do not absorb full containments of contigs</span>
                 <span class="s2">&quot;absorbrc=f&quot;</span><span class="p">,</span> <span class="c1">#do not absorb reverse-compliments</span>
                 <span class="s2">&quot;threads=&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">numcores</span><span class="p">),</span>
+                <span class="s2">&quot;overwrite=t&quot;</span><span class="p">,</span>
             <span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span> 
             <span class="k">return</span> <span class="mi">0</span>
@@ -11992,7 +12384,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
         <span class="sd">&#39;&#39;&#39;Trim adapters and low quality regions from reads using bbduk.sh</span>
 <span class="sd">        from the BBTools suite.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;trim&quot;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Trim Reads</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
             <span class="n">dedupe_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;deduplicated/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
@@ -12003,28 +12395,33 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
             <span class="k">return</span> <span class="n">Popen</span><span class="p">([</span>
                 <span class="s2">&quot;bbduk.sh&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;in=&quot;</span><span class="o">+</span><span class="n">dedupe_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;.deduped&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
-                <span class="s2">&quot;out=&quot;</span><span class="o">+</span><span class="n">trimmed_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;.trimmed&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
+                <span class="s2">&quot;out=&quot;</span><span class="o">+</span><span class="n">trimmed_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;.trimmed.fastq&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;outm=&quot;</span><span class="o">+</span><span class="n">trimmed_dir</span><span class="o">+</span><span class="s2">&quot;failedQC/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;.failedQC&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
+                <span class="s2">&quot;rpkm=&quot;</span><span class="o">+</span><span class="n">trimmed_dir</span><span class="o">+</span><span class="s2">&quot;rpkm.txt&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;refstats=&quot;</span><span class="o">+</span><span class="n">trimmed_dir</span><span class="o">+</span><span class="s2">&quot;trimming_stats.txt&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;literal=NNNNNNCACTCGGGCACCAAGGAC&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;k=12&quot;</span><span class="p">,</span> <span class="c1"># this parameter sets the minimum kmer being trimmed. </span>
+                <span class="s2">&quot;k=24&quot;</span><span class="p">,</span> <span class="c1"># this parameter sets the minimum kmer being trimmed. </span>
                                       <span class="c1">#Longer = more specific, shorter = more sensitive</span>
+                <span class="s2">&quot;mink=8&quot;</span><span class="p">,</span> <span class="c1">#includes truncations of the kmers down to 8</span>
+                <span class="s2">&quot;mm=f&quot;</span><span class="p">,</span> <span class="c1">#do not ignore middle base mismatch of kmer</span>
+                <span class="s2">&quot;rcomp=f&quot;</span><span class="p">,</span> <span class="c1">#do not allow reverse complement kmer matches</span>
                 <span class="s2">&quot;copyundefined=t&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;ktrim=r&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;forcetrimleft=4&quot;</span><span class="p">,</span> <span class="c1">#removes random barcode on left of reads.</span>
                 <span class="s2">&quot;minavgquality=10&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;minlength=10&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;threads=&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">numcores</span><span class="p">),</span>
+                <span class="s2">&quot;overwrite=t&quot;</span><span class="p">,</span>
             <span class="p">],</span>
             <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="mi">0</span>
 
     <span class="k">def</span> <span class="nf">align_ncRNA</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">numcores</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Align reads to ncRNA using STAR. ncRNA fasta downloaded from Ensembl.</span>
+        <span class="sd">&#39;&#39;&#39;Align reads to ncRNA using STAR. ncRNA fasta sequences from Boris.</span>
 <span class="sd">        Output unaligned reads.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;align_ncRNA&quot;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Align to ncRNA</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
             <span class="n">trimmed_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;trimmed/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
@@ -12035,25 +12432,60 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
                 <span class="s2">&quot;STAR&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--runThreadN&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">numcores</span><span class="p">),</span>
                 <span class="s2">&quot;--genomeDir&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">star_ncRNA_dir</span><span class="p">,</span>
-                <span class="s2">&quot;--readFilesIn&quot;</span><span class="p">,</span> <span class="n">trimmed_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;.trimmed&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
+                <span class="s2">&quot;--readFilesIn&quot;</span><span class="p">,</span> <span class="n">trimmed_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;.trimmed.fastq&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--outFileNamePrefix&quot;</span><span class="p">,</span> <span class="n">ncRNA_aligned_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--outSAMtype&quot;</span><span class="p">,</span> <span class="s2">&quot;BAM&quot;</span><span class="p">,</span> <span class="s2">&quot;Unsorted&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--outReadsUnmapped&quot;</span><span class="p">,</span> <span class="s2">&quot;Fastx&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--alignSJDBoverhangMin&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--alignSJoverhangMin&quot;</span><span class="p">,</span> <span class="s2">&quot;8&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outFilterMultimapNmax&quot;</span><span class="p">,</span> <span class="s2">&quot;20&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outFilterType&quot;</span><span class="p">,</span> <span class="s2">&quot;BySJout&quot;</span><span class="p">,</span>
             <span class="p">]</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;.fastq.gz&quot;</span><span class="p">:</span>
-                <span class="n">command</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--readFilesCommand&quot;</span><span class="p">,</span> <span class="s2">&quot;gunzip&quot;</span><span class="p">])</span>
             <span class="k">return</span> <span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> 
                          <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="mi">0</span>
     
+    <span class="k">def</span> <span class="nf">align_reporter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">numcores</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Align reads to reporter sequence using STAR.</span>
+<span class="sd">        Output unaligned reads.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;align_reporter&quot;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Align to reporter</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">ncRNA_aligned_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;ncRNA_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
+            <span class="n">reporter_aligned_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;reporter_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">reporter_aligned_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">F_OK</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">reporter_aligned_dir</span><span class="p">)</span>
+            <span class="n">command</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;STAR&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--runThreadN&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">numcores</span><span class="p">),</span>
+                <span class="s2">&quot;--genomeDir&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">star_reporter_dir</span><span class="p">,</span>
+                <span class="s2">&quot;--readFilesIn&quot;</span><span class="p">,</span> <span class="n">ncRNA_aligned_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Unmapped.out.mate1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outFileNamePrefix&quot;</span><span class="p">,</span> <span class="n">reporter_aligned_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outSAMtype&quot;</span><span class="p">,</span> <span class="s2">&quot;BAM&quot;</span><span class="p">,</span> <span class="s2">&quot;Unsorted&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outReadsUnmapped&quot;</span><span class="p">,</span> <span class="s2">&quot;Fastx&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--alignSJDBoverhangMin&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--alignSJoverhangMin&quot;</span><span class="p">,</span> <span class="s2">&quot;8&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outFilterMultimapNmax&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outFilterType&quot;</span><span class="p">,</span> <span class="s2">&quot;BySJout&quot;</span><span class="p">,</span>
+            <span class="p">]</span>
+            <span class="k">return</span> <span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> 
+                         <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+    
+    
     <span class="k">def</span> <span class="nf">align_genome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">numcores</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Align remaining reads to genome.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;align_genome&quot;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Align to genome</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
-            <span class="n">ncRNA_aligned_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;ncRNA_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">star_reporter_dir</span><span class="p">:</span>
+                <span class="n">previous_aligned_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;reporter_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">previous_aligned_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;ncRNA_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
             <span class="n">tx_aligned_dir</span> <span class="o">=</span> <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;genome_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">tx_aligned_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">F_OK</span><span class="p">):</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">tx_aligned_dir</span><span class="p">)</span>
@@ -12061,50 +12493,83 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
                 <span class="s2">&quot;STAR&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--runThreadN&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numcores</span><span class="p">),</span>
                 <span class="s2">&quot;--genomeDir&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">star_genome_dir</span><span class="p">,</span>
-                <span class="s2">&quot;--readFilesIn&quot;</span><span class="p">,</span> <span class="n">ncRNA_aligned_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Unmapped.out.mate1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--readFilesIn&quot;</span><span class="p">,</span> <span class="n">previous_aligned_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Unmapped.out.mate1&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--outFileNamePrefix&quot;</span><span class="p">,</span> <span class="n">tx_aligned_dir</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--outSAMtype&quot;</span><span class="p">,</span> <span class="s2">&quot;BAM&quot;</span><span class="p">,</span> <span class="s2">&quot;Unsorted&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;--outReadsUnmapped&quot;</span><span class="p">,</span> <span class="s2">&quot;Fastx&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--alignSJDBoverhangMin&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--alignSJoverhangMin&quot;</span><span class="p">,</span> <span class="s2">&quot;8&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--outFilterMultimapNmax&quot;</span><span class="p">,</span> <span class="s2">&quot;200&quot;</span><span class="p">,</span> <span class="c1">#how many multimap sites allowed for read</span>
+                <span class="s2">&quot;--outSAMmultNmax&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="c1">#how many map sites to write to output for each read</span>
+                <span class="s2">&quot;--outMultimapperOrder&quot;</span><span class="p">,</span> <span class="s2">&quot;Random&quot;</span><span class="p">,</span> <span class="c1">#assign read to random alignment if multimapper</span>
+                <span class="s2">&quot;--outFilterType&quot;</span><span class="p">,</span> <span class="s2">&quot;BySJout&quot;</span><span class="p">,</span>
             <span class="p">]</span>
             <span class="k">return</span> <span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span>
                          <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="mi">0</span>
     
-    <span class="k">def</span> <span class="nf">samtools_sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">numcores</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">samtools_sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dir</span><span class="p">,</span> <span class="n">numcores</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Sort BAM file from STAR ouput.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Sort BAM file</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;sort_&quot;</span><span class="o">+</span><span class="n">input_dir</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Sort &quot;</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot; BAM file</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">input_dir</span> <span class="o">==</span> <span class="s2">&quot;reporter_aligned&quot;</span><span class="p">:</span>
+                <span class="n">aligned_suffix</span> <span class="o">=</span> <span class="s2">&quot;_Aligned.out.plusstrand&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">aligned_suffix</span> <span class="o">=</span> <span class="s2">&quot;_Aligned.out&quot;</span>
             <span class="k">return</span> <span class="n">Popen</span><span class="p">([</span>
                 <span class="s2">&quot;samtools&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;sort&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;-@&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">numcores</span><span class="p">),</span>
-                <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="c1">#use prefix as full file name</span>
-                <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;genome_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Aligned.out.bam&quot;</span><span class="p">,</span>
-                <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;genome_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Aligned.out.sorted.bam&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="n">aligned_suffix</span><span class="o">+</span><span class="s2">&quot;.bam&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="n">aligned_suffix</span><span class="o">+</span><span class="s2">&quot;.sorted.bam&quot;</span>
             <span class="p">],</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="mi">0</span>
     
-    <span class="k">def</span> <span class="nf">samtools_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">samtools_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dir</span><span class="p">,</span> <span class="n">numcores</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Index BAM file from STAR output</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Index BAM file</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;index_&quot;</span><span class="o">+</span><span class="n">input_dir</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Index &quot;</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot; BAM file</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">input_dir</span> <span class="o">==</span> <span class="s2">&quot;reporter_aligned&quot;</span><span class="p">:</span>
+                <span class="n">aligned_suffix</span> <span class="o">=</span> <span class="s2">&quot;_Aligned.out.plusstrand&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">aligned_suffix</span> <span class="o">=</span> <span class="s2">&quot;_Aligned.out&quot;</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;genome_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Aligned.out.bam&quot;</span><span class="p">,)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="n">aligned_suffix</span><span class="o">+</span><span class="s2">&quot;.bam&quot;</span><span class="p">,)</span>
             <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
                 <span class="k">pass</span>
             <span class="k">return</span> <span class="n">Popen</span><span class="p">([</span>
                 <span class="s2">&quot;samtools&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;index&quot;</span><span class="p">,</span>
-                <span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;genome_aligned/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Aligned.out.sorted.bam&quot;</span>
+                <span class="s2">&quot;-@&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">numcores</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="n">aligned_suffix</span><span class="o">+</span><span class="s2">&quot;.sorted.bam&quot;</span>
             <span class="p">],</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="mi">0</span>
+        
+    <span class="k">def</span> <span class="nf">samtools_remove_rv_reads</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dir</span><span class="p">,</span> <span class="n">numcores</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Remove reverse reads aligned to the reporter minus strand with samtools</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">killflag</span> <span class="o">==</span> <span class="kc">False</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;remove_reverse_reads&quot;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Remove reporter reverse strand reads</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">+</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;-&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">Popen</span><span class="p">([</span>
+                <span class="s2">&quot;samtools&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;view&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;-@&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">numcores</span><span class="p">),</span>
+                <span class="s2">&quot;-F&quot;</span><span class="p">,</span> <span class="s2">&quot;0x10&quot;</span><span class="p">,</span> <span class="c1">#only include reads with this flag, which means plus strand alignment</span>
+                <span class="s2">&quot;-o&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Aligned.out.plusstrand.bam&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">+</span><span class="n">input_dir</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="o">+</span><span class="s2">&quot;_Aligned.out.bam&quot;</span>
+            <span class="p">],</span> <span class="n">stderr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">setsid</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+            
         
         
     <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">):</span>
@@ -12114,6 +12579,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 <span class="sd">        Polling happens every 1 second.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">global</span> <span class="n">kill_pipeline</span>
+        <span class="k">global</span> <span class="n">thread_tracker</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">exit_code</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
             <span class="k">while</span> <span class="n">exit_code</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
@@ -12130,6 +12596,8 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">current_step</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_step</span><span class="p">]</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">thread_tracker</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_step</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">completion</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">ProcessLookupError</span><span class="p">):</span> 
             <span class="c1">#necessary to catch errors from methods returning 0 if self.killflag = True</span>
             <span class="k">pass</span>
@@ -12142,7 +12610,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[119]:</div>
+<div class="prompt input_prompt">In&nbsp;[178]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
@@ -12150,6 +12618,7 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 <span class="n">kill_pipeline</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="n">samples_done</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="n">sample_runs</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">thread_tracker</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
 
 <span class="c1">#start threads for running each sample through the pipeline</span>
 <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">fastq_files</span><span class="p">:</span>
@@ -12158,18 +12627,56 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
     
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Pipeline Running...&quot;</span><span class="p">)</span>
 
+<span class="k">if</span> <span class="n">star_reporter_dir</span><span class="p">:</span>
+    <span class="n">steps_mapper</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">([</span> <span class="c1">#offset by one because if it&#39;s recorded in the log, it&#39;s already done</span>
+        <span class="p">(</span><span class="s2">&quot;initiate&quot;</span><span class="p">,</span> <span class="s2">&quot;Deduplicating&quot;</span><span class="p">),</span> 
+        <span class="p">(</span><span class="s2">&quot;deduplicate&quot;</span><span class="p">,</span> <span class="s2">&quot;Trimming Adapter&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;trim&quot;</span><span class="p">,</span> <span class="s2">&quot;Aligning to ncRNA&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;align_ncRNA&quot;</span><span class="p">,</span> <span class="s2">&quot;Aligning to Reporter&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;align_reporter&quot;</span><span class="p">,</span> <span class="s2">&quot;Filtering reporter reverse reads&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;remove_reverse_reads&quot;</span><span class="p">,</span> <span class="s2">&quot;Sorting reporter-aligned reads&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;sort_reporter_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;Indexing reporter-aligned reads&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;index_reporter_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;Aligning to Genome&quot;</span><span class="p">),</span> 
+        <span class="p">(</span><span class="s2">&quot;align_genome&quot;</span><span class="p">,</span> <span class="s2">&quot;Sorting reporter aligned reads&quot;</span><span class="p">),</span> 
+        <span class="p">(</span><span class="s2">&quot;sort_genome_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;Indexing Genome Aligned Reads&quot;</span><span class="p">),</span> 
+        <span class="p">(</span><span class="s2">&quot;index_genome_aligned&quot;</span><span class="p">,</span> <span class="s2">&quot;Done&quot;</span><span class="p">),</span>
+    <span class="p">])</span>
+
+<span class="n">steps</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Start&quot;</span><span class="p">]</span><span class="o">+</span><span class="p">[</span><span class="n">steps_mapper</span><span class="p">[</span><span class="n">step</span><span class="p">]</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps_mapper</span><span class="p">]</span>
+<span class="n">prefixes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">thread_tracker</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">figure</span><span class="p">(</span><span class="n">height</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">y_range</span><span class="o">=</span><span class="n">prefixes</span><span class="p">,</span> <span class="n">background_fill_color</span><span class="o">=</span><span class="s2">&quot;lightgray&quot;</span><span class="p">,</span> <span class="n">x_range</span><span class="o">=</span><span class="n">steps</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Pipeline Progress&quot;</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="p">[])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">xgrid</span><span class="o">.</span><span class="n">grid_line_color</span> <span class="o">=</span> <span class="s2">&quot;gray&quot;</span>
+<span class="n">p</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">major_label_orientation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">8</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">ygrid</span><span class="o">.</span><span class="n">visible</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">source</span> <span class="o">=</span> <span class="n">ColumnDataSource</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;y&quot;</span><span class="p">:</span><span class="n">prefixes</span><span class="p">,</span> <span class="s2">&quot;right&quot;</span><span class="p">:[</span><span class="s2">&quot;Start&quot;</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">),</span> <span class="s2">&quot;height&quot;</span><span class="p">:[</span><span class="mf">0.5</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">),</span> <span class="s2">&quot;left&quot;</span><span class="p">:[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">)})</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">hbar</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="s2">&quot;height&quot;</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">factor_cmap</span><span class="p">(</span><span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">palette</span><span class="o">=</span><span class="n">brewer</span><span class="p">[</span><span class="s2">&quot;Spectral&quot;</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">)],</span> <span class="n">factors</span><span class="o">=</span><span class="n">prefixes</span><span class="p">),</span> 
+           <span class="n">line_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">)</span>
+
+<span class="n">show</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">notebook_handle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
 <span class="c1">#Check every 1 sec whether the pipeline is finished and report wether it&#39;s been terminated.</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="k">while</span> <span class="n">samples_done</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">fastq_files</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">thread_tracker</span><span class="p">:</span>
+            <span class="n">source</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;y&quot;</span><span class="p">:</span><span class="n">prefixes</span><span class="p">,</span> <span class="s2">&quot;right&quot;</span><span class="p">:[</span><span class="n">steps_mapper</span><span class="p">[</span><span class="n">thread_tracker</span><span class="p">[</span><span class="n">sample</span><span class="p">]]</span> <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">thread_tracker</span><span class="p">],</span> <span class="s2">&quot;height&quot;</span><span class="p">:[</span><span class="mf">0.5</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">),</span> <span class="s2">&quot;left&quot;</span><span class="p">:[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">)}</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="n">CDSView</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">data_source</span><span class="p">)</span>
+            <span class="n">push_notebook</span><span class="p">()</span>
         <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">kill_pipeline</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">source</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;y&quot;</span><span class="p">:</span><span class="n">prefixes</span><span class="p">,</span> <span class="s2">&quot;right&quot;</span><span class="p">:[</span><span class="n">steps_mapper</span><span class="p">[</span><span class="n">thread_tracker</span><span class="p">[</span><span class="n">sample</span><span class="p">]]</span> <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">thread_tracker</span><span class="p">],</span> <span class="s2">&quot;height&quot;</span><span class="p">:[</span><span class="mf">0.5</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">),</span> <span class="s2">&quot;left&quot;</span><span class="p">:[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">prefixes</span><span class="p">)}</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="n">CDSView</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">data_source</span><span class="p">)</span>
+            <span class="n">push_notebook</span><span class="p">()</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Pipeline finished successfully!&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Run terminated. Check for errors&quot;</span><span class="p">)</span>
 <span class="k">except</span><span class="p">:</span>
     <span class="n">kill_pipeline</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1">#allows KeyboardInterrupt to kill pipeline</span>
     <span class="k">raise</span>
+
+    
 
 <span class="n">runtime</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
 <span class="k">if</span> <span class="n">runtime</span> <span class="o">&gt;</span> <span class="mi">60</span><span class="p">:</span>
@@ -12195,12 +12702,146 @@ Data will be output to /home/anthony/profiling_pipeline/sample_data/output/
 
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Pipeline Running...
-Pipeline finished successfully!
-Run time: 6.74 minutes
 </pre>
 </div>
 </div>
 
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+
+<div class="output_html rendered_html output_subarea ">
+
+
+
+
+
+
+  <div class="bk-root" id="320dab05-b116-4902-95e6-273670d7416b"></div>
+
+</div>
+
+</div>
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+
+
+
+<div id="ac47d984-344d-41bd-9946-cf4a0b63da47"></div>
+<div class="output_subarea output_javascript ">
+<script type="text/javascript">
+var element = $('#ac47d984-344d-41bd-9946-cf4a0b63da47');
+(function(root) {
+  function embed_document(root) {
+    
+  var docs_json = {"a7a21f3b-b4a2-4083-94ed-3bad6a76a3b9":{"roots":{"references":[{"attributes":{"source":{"id":"183362","type":"ColumnDataSource"}},"id":"183368","type":"CDSView"},{"attributes":{"plot":null,"text":"Pipeline Progress"},"id":"183342","type":"Title"},{"attributes":{},"id":"183349","type":"CategoricalScale"},{"attributes":{"fill_color":{"field":"y","transform":{"id":"183363","type":"CategoricalColorMapper"}},"height":{"field":"height"},"left":{"field":"left"},"right":{"field":"right"},"y":{"field":"y"}},"id":"183365","type":"HBar"},{"attributes":{},"id":"183358","type":"CategoricalTicker"},{"attributes":{},"id":"184028","type":"UnionRenderers"},{"attributes":{},"id":"183351","type":"CategoricalScale"},{"attributes":{"dimension":1,"plot":{"id":"183343","subtype":"Figure","type":"Plot"},"ticker":{"id":"183358","type":"CategoricalTicker"},"visible":false},"id":"183360","type":"Grid"},{"attributes":{"active_drag":"auto","active_inspect":"auto","active_multi":null,"active_scroll":"auto","active_tap":"auto"},"id":"183361","type":"Toolbar"},{"attributes":{"callback":null,"factors":["ASCC2-TRIP4","ASCC3-ASCC2-TRIP4-ZNF598","Mock","Scrambled","ASCC3"]},"id":"183347","type":"FactorRange"},{"attributes":{"factors":["ASCC2-TRIP4","ASCC3-ASCC2-TRIP4-ZNF598","Mock","Scrambled","ASCC3"],"palette":["#2b83ba","#abdda4","#ffffbf","#fdae61","#d7191c"]},"id":"183363","type":"CategoricalColorMapper"},{"attributes":{},"id":"184027","type":"Selection"},{"attributes":{"data_source":{"id":"183362","type":"ColumnDataSource"},"glyph":{"id":"183365","type":"HBar"},"hover_glyph":null,"muted_glyph":null,"nonselection_glyph":{"id":"183366","type":"HBar"},"selection_glyph":null,"view":{"id":"183368","type":"CDSView"}},"id":"183367","type":"GlyphRenderer"},{"attributes":{"formatter":{"id":"184025","type":"CategoricalTickFormatter"},"plot":{"id":"183343","subtype":"Figure","type":"Plot"},"ticker":{"id":"183358","type":"CategoricalTicker"}},"id":"183357","type":"CategoricalAxis"},{"attributes":{"callback":null,"data":{"height":[0.5,0.5,0.5,0.5,0.5],"left":[0,0,0,0,0],"right":["Start","Start","Start","Start","Start"],"y":["ASCC2-TRIP4","ASCC3-ASCC2-TRIP4-ZNF598","Mock","Scrambled","ASCC3"]},"selected":{"id":"184027","type":"Selection"},"selection_policy":{"id":"184028","type":"UnionRenderers"}},"id":"183362","type":"ColumnDataSource"},{"attributes":{},"id":"184025","type":"CategoricalTickFormatter"},{"attributes":{"formatter":{"id":"184023","type":"CategoricalTickFormatter"},"major_label_orientation":0.39269908169872414,"plot":{"id":"183343","subtype":"Figure","type":"Plot"},"ticker":{"id":"183354","type":"CategoricalTicker"}},"id":"183353","type":"CategoricalAxis"},{"attributes":{"background_fill_color":{"value":"lightgray"},"below":[{"id":"183353","type":"CategoricalAxis"}],"left":[{"id":"183357","type":"CategoricalAxis"}],"plot_height":200,"plot_width":800,"renderers":[{"id":"183353","type":"CategoricalAxis"},{"id":"183356","type":"Grid"},{"id":"183357","type":"CategoricalAxis"},{"id":"183360","type":"Grid"},{"id":"183367","type":"GlyphRenderer"}],"title":{"id":"183342","type":"Title"},"toolbar":{"id":"183361","type":"Toolbar"},"x_range":{"id":"183345","type":"FactorRange"},"x_scale":{"id":"183349","type":"CategoricalScale"},"y_range":{"id":"183347","type":"FactorRange"},"y_scale":{"id":"183351","type":"CategoricalScale"}},"id":"183343","subtype":"Figure","type":"Plot"},{"attributes":{},"id":"183354","type":"CategoricalTicker"},{"attributes":{"fill_alpha":{"value":0.1},"fill_color":{"value":"#1f77b4"},"height":{"field":"height"},"left":{"field":"left"},"line_alpha":{"value":0.1},"line_color":{"value":"#1f77b4"},"right":{"field":"right"},"y":{"field":"y"}},"id":"183366","type":"HBar"},{"attributes":{"callback":null,"factors":["Start","Deduplicating","Trimming Adapter","Aligning to ncRNA","Aligning to Reporter","Filtering reporter reverse reads","Sorting reporter-aligned reads","Indexing reporter-aligned reads","Aligning to Genome","Sorting reporter aligned reads","Indexing Genome Aligned Reads","Done"]},"id":"183345","type":"FactorRange"},{"attributes":{"grid_line_color":{"value":"gray"},"plot":{"id":"183343","subtype":"Figure","type":"Plot"},"ticker":{"id":"183354","type":"CategoricalTicker"}},"id":"183356","type":"Grid"},{"attributes":{},"id":"184023","type":"CategoricalTickFormatter"}],"root_ids":["183343"]},"title":"Bokeh Application","version":"1.0.1"}};
+  var render_items = [{"docid":"a7a21f3b-b4a2-4083-94ed-3bad6a76a3b9","notebook_comms_target":"184029","roots":{"183343":"320dab05-b116-4902-95e6-273670d7416b"}}];
+  root.Bokeh.embed.embed_items_notebook(docs_json, render_items);
+
+  }
+  if (root.Bokeh !== undefined) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (root.Bokeh !== undefined) {
+        embed_document(root);
+        clearInterval(timer);
+      }
+      attempts++;
+      if (attempts > 100) {
+        console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+        clearInterval(timer);
+      }
+    }, 10, root)
+  }
+})(window);
+</script>
+</div>
+
+</div>
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Pipeline finished successfully!
+Run time: 10.91 minutes
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">read_fate</span><span class="p">(</span><span class="n">sample_name</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">output_dir</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;logs/&quot;</span><span class="o">+</span><span class="n">sample_name</span><span class="o">+</span><span class="s2">&quot;_stdout.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">,</span> \
+    <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;ncRNA_aligned/&quot;</span><span class="o">+</span><span class="n">sample_name</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="n">sample_name</span><span class="o">+</span><span class="s2">&quot;_Log.final.out&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ncRNA_log</span><span class="p">,</span> \
+    <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;reporter_aligned/&quot;</span><span class="o">+</span><span class="n">sample_name</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="n">sample_name</span><span class="o">+</span><span class="s2">&quot;_Log.final.out&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">reporter_log</span><span class="p">,</span> \
+    <span class="nb">open</span><span class="p">(</span><span class="n">output_dir</span><span class="o">+</span><span class="s2">&quot;genome_aligned/&quot;</span><span class="o">+</span><span class="n">sample_name</span><span class="o">+</span><span class="s2">&quot;/&quot;</span><span class="o">+</span><span class="n">sample_name</span><span class="o">+</span><span class="s2">&quot;_Log.final.out&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">genome_log</span><span class="p">:</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">log</span><span class="o">.</span><span class="n">readlines</span><span class="p">()[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">dedupe_end</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;Trim Reads</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">dedupe_start</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;--------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dedupe_end</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="p">[</span><span class="n">dedupe_end</span><span class="p">:</span><span class="n">dedupe_start</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Input&quot;</span><span class="p">):</span>
+                <span class="n">input_reads</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Result&quot;</span><span class="p">):</span>
+                <span class="n">deduplicated_reads</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">trim_end</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;Align to ncRNA</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">trim_start</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;--------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">trim_end</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="p">[</span><span class="n">trim_end</span><span class="p">:</span><span class="n">trim_start</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Result&quot;</span><span class="p">):</span>
+                <span class="n">trimmed_reads</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">ncRNA_log</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Uniquely mapped reads number&quot;</span><span class="p">):</span>
+                <span class="n">ncRNA_mapped_reads</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Number of reads mapped to multiple loci&quot;</span><span class="p">):</span>
+                <span class="n">ncRNA_mapped_reads</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">reporter_log</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Uniquely mapped reads number&quot;</span><span class="p">):</span>
+                <span class="n">reporter_mapped</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Number of reads mapped to multiple loci&quot;</span><span class="p">):</span>
+                <span class="n">reporter_mapped</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">genome_log</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Number of input reads&quot;</span><span class="p">):</span>
+                <span class="n">genome_input_reads</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Uniquely mapped reads number&quot;</span><span class="p">):</span>
+                <span class="n">genome_mapped</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Number of reads mapped to multiple loci&quot;</span><span class="p">):</span>
+                <span class="n">genome_mapped</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="n">unmapped_reads</span> <span class="o">=</span> <span class="n">genome_input_reads</span> <span class="o">-</span> <span class="n">genome_mapped</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Library was&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">deduplicated_reads</span><span class="o">/</span><span class="n">input_reads</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;unique.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Of those,&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">trimmed_reads</span><span class="o">/</span><span class="n">deduplicated_reads</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;survived trimming.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">ncRNA_mapped_reads</span><span class="o">/</span><span class="n">trimmed_reads</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;mapped to ncRNA.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">reporter_mapped</span><span class="o">/</span><span class="n">trimmed_reads</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;mapped to reporter.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">genome_mapped</span><span class="o">/</span><span class="n">trimmed_reads</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;mapped to the genome.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">unmapped_reads</span><span class="o">/</span><span class="n">trimmed_reads</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;remained unmapped.&quot;</span><span class="p">)</span>
+                
+<span class="k">for</span> <span class="n">barcode</span> <span class="ow">in</span> <span class="n">barcode_name_mapping</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">barcode_name_mapping</span><span class="p">[</span><span class="n">barcode</span><span class="p">])</span>
+    <span class="n">read_fate</span><span class="p">(</span><span class="n">barcode_name_mapping</span><span class="p">[</span><span class="n">barcode</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+
+</div>
 </div>
 </div>
 
