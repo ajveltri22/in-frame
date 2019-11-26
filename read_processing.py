@@ -3,7 +3,7 @@
 
 # Import Statements
 
-# In[166]:
+# In[46]:
 
 
 from threading import Thread
@@ -12,6 +12,7 @@ from time import sleep, time
 import signal
 import os
 import re
+import numpy as np
 
 from bokeh.plotting import figure
 from bokeh.io import show, output_notebook, push_notebook
@@ -25,13 +26,13 @@ output_notebook()
 
 # # Setup
 
-# In[174]:
+# In[47]:
 
 
 #set paths/parameters
 fastq_dir = "/home/anthony/siRNA_profiling/FASTQ/"
-output_dir = "/home/anthony/profiling_pipeline/sample_data/"
-available_cores = 96 #TODO:deal with situation if threads are fewer than number of samples.
+output_dir = "/home/anthony/in-frame/pipeline_testing/"
+available_cores = 48 #TODO:deal with situation if threads are fewer than number of samples.
 star_ncRNA_dir = "/home/anthony/reference_genome/boris_profiling_annotations/hg38_Anno_BZ/ncRNA_STAR"
 star_genome_dir = "/home/anthony/reference_genome/STAR_index/"
 star_reporter_dir = "/home/anthony/siRNA_profiling/reporter_fasta/reporter_STAR_index/" # if no reporter, set to False
@@ -40,7 +41,7 @@ fastq_dir += "/" if not fastq_dir.endswith("/") else ""
 output_dir += "/" if not output_dir.endswith("/") else ""
 
 
-# In[175]:
+# In[48]:
 
 
 #rename fasta files
@@ -64,7 +65,7 @@ for file in files:
                 break
 
 
-# In[176]:
+# In[49]:
 
 
 #set up folder structure for output
@@ -104,7 +105,7 @@ print("Data will be output to", output_dir)
 
 # # Main
 
-# In[177]:
+# In[56]:
 
 
 #defines process handler for running one sample through the pipeline
@@ -152,151 +153,143 @@ class run_one_sample():
         self.suffix = match.group(2)
         if self.prefix not in thread_tracker:
             thread_tracker[self.prefix] = "initiate"
-        if self.star_reporter_dir:
-            self.steps = ["initiate", "deduplicate", "trim", "align_ncRNA", "align_reporter", "remove_reverse_reads", "sort_reporter_aligned", 
-                          "index_reporter_aligned", "align_genome", "sort_genome_aligned", "index_genome_aligned", "done"] 
-        else:
-            self.steps = ["initiate", "deduplicate", "trim", "align_ncRNA", "align_genome", 
-                          "sort_genome_aligned", "index_genome_aligned", "done"]
-        if not os.access(output_dir+"logs/pipeline_completion/"+self.prefix+"_completion_log.txt", os.F_OK):
-            self.current_step = 0
-            with open(output_dir+"logs/pipeline_completion/"+self.prefix+"_completion_log.txt", "w") as self.completion:
-                self.completion.write("initiate\n")
-        else:
-            with open(output_dir+"logs/pipeline_completion/"+self.prefix+"_completion_log.txt", "r") as self.completion:
-                self.current_step = self.steps.index(self.completion.readlines()[-1].strip())
-                thread_tracker[self.prefix] = self.steps[self.current_step]
+        self.steps = self.define_steps()
         
         with open(output_dir+"/logs/"+self.prefix+"_stdout.txt", "a") as self.stdout,             open(output_dir+"/logs/pipeline_completion/"+self.prefix+"_completion_log.txt", "a") as self.completion:
             try:
-                self.proc = self.deduplicate(fastq_dir, output_dir, self.filename, numcores)
-                self.check(self.proc)
-                self.proc = self.trim_reads(output_dir, self.filename, numcores)
-                self.check(self.proc)
-                self.proc = self.align_ncRNA(output_dir, self.filename, numcores)
-                self.check(self.proc)
-                if self.star_reporter_dir:
-                    self.proc = self.align_reporter(output_dir, self.filename, numcores)
-                    self.check(self.proc)
-                    self.proc = self.samtools_remove_rv_reads("reporter_aligned", numcores)
-                    self.check(self.proc)
-                    self.proc = self.samtools_sort("reporter_aligned", numcores)
-                    self.check(self.proc)
-                    self.proc = self.samtools_index("reporter_aligned", numcores)
-                    self.check(self.proc)
-                self.proc = self.align_genome(output_dir, self.filename, numcores)
-                self.check(self.proc)
-                self.proc = self.samtools_sort("genome_aligned", numcores)
-                self.check(self.proc)
-                self.proc = self.samtools_index("genome_aligned", numcores)
-                self.check(self.proc)
-                #thread_tracker[self.prefix] = "done"
-                #self.completion.write("done.\n")
-                samples_done += 1
+                for step_string in self.steps.keys():
+                    if self.killflag == False and kill_pipeline == False:
+                        function_name, function_args = self.steps.pop(step_string)
+                        self.process = function_name(*function_args)
+                        self.check(self.process)
+                        self.completion.write(step_string+"\n")
+                        self.completion.flush()
+                        thread_tracker[self.prefix] = step_string
+                if len(self.steps) == 0:
+                    samples_done += 1
+                        
             except:
                 self.killflag = True
                 kill_pipeline = True
                 samples_done += 1 
-                try:
-                    os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
                 raise
+                
+    
+    def define_steps(self):
+        steps = OrderedDict([
+            ("deduplicate", (self.deduplicate, (fastq_dir, output_dir, self.filename, numcores))),
+            ("trim", (self.trim_reads, (output_dir, self.filename, numcores))),
+            ("align_ncRNA", (self.align_ncRNA, (output_dir, self.filename, numcores))),
+            ("align_reporter", (self.align_reporter, (output_dir, self.filename, numcores))),
+            ("remove_reverse_reads", (self.samtools_remove_rv_reads, ("reporter_aligned", numcores))),
+            ("sort_reporter_aligned", (self.samtools_sort, ("reporter_aligned", numcores))),
+            ("index_reporter_aligned", (self.samtools_index, ("reporter_aligned", numcores))),
+            ("align_genome", (self.align_genome, (output_dir, self.filename, numcores))),
+            ("sort_genome_aligned", (self.samtools_sort, ("genome_aligned", numcores))),
+            ("index_genome_aligned", (self.samtools_index, ("genome_aligned", numcores))),
+        ])
+        if not self.star_reporter_dir:    
+            [steps.pop(step) for step in ["align_reporter", 
+                                          "remove_reverse_reads", 
+                                          "sort_reporter_aligned", 
+                                          "index_reporter_aligned"]]
+            
+        if os.access(output_dir+"logs/pipeline_completion/"+self.prefix+"_completion_log.txt", os.F_OK):
+            with open(output_dir+"logs/pipeline_completion/"+self.prefix+"_completion_log.txt", "r") as self.completion:
+                for line in self.completion.readlines():
+                    steps.pop(line.strip())
+        return steps
+    
     
     def deduplicate(self, fastq_dir, output_dir, filename, numcores):
         '''deduplicate ribosome profiling reads using dedupe.sh from 
         the BBTools suite.
         '''
-        if self.killflag == False and self.current_step == self.steps.index("deduplicate")-1:
-            self.stdout.write("Deduplicate\n"+"".join(["-"]*20)+"\n\n")
-            self.stdout.flush()
-            dedupe_dir = output_dir+"deduplicated/"+self.prefix+"/"
-            if not os.access(dedupe_dir, os.F_OK):
-                os.mkdir(dedupe_dir)
-            return Popen([
-                "dedupe.sh",
-                "in="+fastq_dir+filename,
-                "out="+dedupe_dir+self.prefix+".deduped"+self.suffix,
-                "absorbmatch=t", #absorb exact matches of contigs
-                "absorbcontainment=f", #do not absorb full containments of contigs
-                "absorbrc=f", #do not absorb reverse-compliments
-                "threads="+str(numcores),
-                "overwrite=t",
-            ], stdout=self.stdout, stderr=self.stdout, preexec_fn=os.setsid)
-        else: 
-            return 0
+        self.stdout.write("Deduplicate\n"+"".join(["-"]*20)+"\n\n")
+        self.stdout.flush()
+        dedupe_dir = output_dir+"deduplicated/"+self.prefix+"/"
+        if not os.access(dedupe_dir, os.F_OK):
+            os.mkdir(dedupe_dir)
+        return Popen([
+            "dedupe.sh",
+            "in="+fastq_dir+filename,
+            "out="+dedupe_dir+self.prefix+".deduped"+self.suffix,
+            "absorbmatch=t", #absorb exact matches of contigs
+            "absorbcontainment=f", #do not absorb full containments of contigs
+            "absorbrc=f", #do not absorb reverse-compliments
+            "threads="+str(numcores),
+            "overwrite=t",
+        ], stdout=self.stdout, stderr=self.stdout, preexec_fn=os.setsid)
+            
+            
     
     def trim_reads(self, output_dir, filename, numcores):
         '''Trim adapters and low quality regions from reads using bbduk.sh
         from the BBTools suite.
         '''
-        if self.killflag == False and self.current_step == self.steps.index("trim")-1:
-            self.stdout.write("\n\nTrim Reads\n"+"".join(["-"]*20)+"\n\n")
-            self.stdout.flush()
-            dedupe_dir = output_dir+"deduplicated/"+self.prefix+"/"
-            trimmed_dir = output_dir+"trimmed/"+self.prefix+"/"
-            if not os.access(trimmed_dir, os.F_OK):
-                os.mkdir(trimmed_dir)
-                os.mkdir(trimmed_dir+"failedQC")
-            return Popen([
-                "bbduk.sh",
-                "in="+dedupe_dir+self.prefix+".deduped"+self.suffix,
-                "out="+trimmed_dir+self.prefix+".trimmed.fastq",
-                "outm="+trimmed_dir+"failedQC/"+self.prefix+".failedQC"+self.suffix,
-                "rpkm="+trimmed_dir+"rpkm.txt",
-                "refstats="+trimmed_dir+"trimming_stats.txt",
-                "literal=NNNNNNCACTCGGGCACCAAGGAC",
-                "k=24", # this parameter sets the minimum kmer being trimmed. 
-                                      #Longer = more specific, shorter = more sensitive
-                "mink=8", #includes truncations of the kmers down to 8
-                "mm=f", #do not ignore middle base mismatch of kmer
-                "rcomp=f", #do not allow reverse complement kmer matches
-                "copyundefined=t",
-                "ktrim=r",
-                "forcetrimleft=4", #removes random barcode on left of reads.
-                "minavgquality=10",
-                "minlength=10",
-                "threads="+str(numcores),
-                "overwrite=t",
-            ],
-            stdout=self.stdout, stderr=self.stdout, preexec_fn=os.setsid)
-        else:
-            return 0
+        self.stdout.write("\n\nTrim Reads\n"+"".join(["-"]*20)+"\n\n")
+        self.stdout.flush()
+        dedupe_dir = output_dir+"deduplicated/"+self.prefix+"/"
+        trimmed_dir = output_dir+"trimmed/"+self.prefix+"/"
+        if not os.access(trimmed_dir, os.F_OK):
+            os.mkdir(trimmed_dir)
+            os.mkdir(trimmed_dir+"failedQC")
+        return Popen([
+            "bbduk.sh",
+            "in="+dedupe_dir+self.prefix+".deduped"+self.suffix,
+            "out="+trimmed_dir+self.prefix+".trimmed.fastq",
+            "outm="+trimmed_dir+"failedQC/"+self.prefix+".failedQC"+self.suffix,
+            "rpkm="+trimmed_dir+"rpkm.txt",
+            "refstats="+trimmed_dir+"trimming_stats.txt",
+            "literal=NNNNNNCACTCGGGCACCAAGGAC",
+            "k=24", # this parameter sets the minimum kmer being trimmed. 
+                                  #Longer = more specific, shorter = more sensitive
+            "mink=8", #includes truncations of the kmers down to 8
+            "mm=f", #do not ignore middle base mismatch of kmer
+            "rcomp=f", #do not allow reverse complement kmer matches
+            "copyundefined=t",
+            "ktrim=r",
+            "forcetrimleft=4", #removes random barcode on left of reads.
+            "minavgquality=10",
+            "minlength=10",
+            "threads="+str(numcores),
+            "overwrite=t",
+        ],
+        stdout=self.stdout, stderr=self.stdout, preexec_fn=os.setsid)
+            
 
     def align_ncRNA(self, output_dir, filename, numcores):
         '''Align reads to ncRNA using STAR. ncRNA fasta sequences from Boris.
         Output unaligned reads.
         '''
-        if self.killflag == False and self.current_step == self.steps.index("align_ncRNA")-1:
-            self.stdout.write("\n\nAlign to ncRNA\n"+"".join(["-"]*20)+"\n\n")
-            self.stdout.flush()
-            trimmed_dir = output_dir+"trimmed/"+self.prefix+"/"
-            ncRNA_aligned_dir = output_dir+"ncRNA_aligned/"+self.prefix+"/"
-            if not os.access(ncRNA_aligned_dir, os.F_OK):
-                os.mkdir(ncRNA_aligned_dir)
-            command = [
-                "STAR",
-                "--runThreadN", str(numcores),
-                "--genomeDir", self.star_ncRNA_dir,
-                "--readFilesIn", trimmed_dir+self.prefix+".trimmed.fastq",
-                "--outFileNamePrefix", ncRNA_aligned_dir+self.prefix+"_",
-                "--outSAMtype", "BAM", "Unsorted",
-                "--outReadsUnmapped", "Fastx",
-                "--alignSJDBoverhangMin", "1",
-                "--alignSJoverhangMin", "8",
-                "--outFilterMultimapNmax", "20",
-                "--outFilterType", "BySJout",
-            ]
-            return Popen(command, stderr=self.stdout, stdout=self.stdout, 
-                         preexec_fn=os.setsid)
-        else:
-            return 0
+        self.stdout.write("\n\nAlign to ncRNA\n"+"".join(["-"]*20)+"\n\n")
+        self.stdout.flush()
+        trimmed_dir = output_dir+"trimmed/"+self.prefix+"/"
+        ncRNA_aligned_dir = output_dir+"ncRNA_aligned/"+self.prefix+"/"
+        if not os.access(ncRNA_aligned_dir, os.F_OK):
+            os.mkdir(ncRNA_aligned_dir)
+        command = [
+            "STAR",
+            "--runThreadN", str(numcores),
+            "--genomeDir", self.star_ncRNA_dir,
+            "--readFilesIn", trimmed_dir+self.prefix+".trimmed.fastq",
+            "--outFileNamePrefix", ncRNA_aligned_dir+self.prefix+"_",
+            "--outSAMtype", "BAM", "Unsorted",
+            "--outReadsUnmapped", "Fastx",
+            "--alignSJDBoverhangMin", "1",
+            "--alignSJoverhangMin", "8",
+            "--outFilterMultimapNmax", "20",
+            "--outFilterType", "BySJout",
+        ]
+        return Popen(command, stderr=self.stdout, stdout=self.stdout, 
+                     preexec_fn=os.setsid)
+            
     
     def align_reporter(self, output_dir, filename, numcores):
         '''Align reads to reporter sequence using STAR.
         Output unaligned reads.
         '''
-        if self.killflag == False and self.current_step == self.steps.index("align_reporter")-1:
+        if self.star_reporter_dir:
             self.stdout.write("\n\nAlign to reporter\n"+"".join(["-"]*20)+"\n\n")
             self.stdout.flush()
             ncRNA_aligned_dir = output_dir+"ncRNA_aligned/"+self.prefix+"/"
@@ -318,90 +311,83 @@ class run_one_sample():
             ]
             return Popen(command, stderr=self.stdout, stdout=self.stdout, 
                          preexec_fn=os.setsid)
-        else:
-            return 0
+                
     
     
     def align_genome(self, output_dir, filename, numcores):
         '''Align remaining reads to genome.
         '''
-        if self.killflag == False and (self.current_step == self.steps.index("align_genome")-1):
-            self.stdout.write("\n\nAlign to genome\n"+"".join(["-"]*20)+"\n\n")
-            self.stdout.flush()
-            if self.star_reporter_dir:
-                previous_aligned_dir = output_dir+"reporter_aligned/"+self.prefix+"/"
-            else:
-                previous_aligned_dir = output_dir+"ncRNA_aligned/"+self.prefix+"/"
-            tx_aligned_dir = output_dir+"genome_aligned/"+self.prefix+"/"
-            if not os.access(tx_aligned_dir, os.F_OK):
-                os.mkdir(tx_aligned_dir)
-            command = [
-                "STAR",
-                "--runThreadN", str(self.numcores),
-                "--genomeDir", self.star_genome_dir,
-                "--readFilesIn", previous_aligned_dir+self.prefix+"_Unmapped.out.mate1",
-                "--outFileNamePrefix", tx_aligned_dir+self.prefix+"_",
-                "--outSAMtype", "BAM", "Unsorted",
-                "--outReadsUnmapped", "Fastx",
-                "--alignSJDBoverhangMin", "1",
-                "--alignSJoverhangMin", "8",
-                "--outFilterMultimapNmax", "200", #how many multimap sites allowed for read
-                "--outSAMmultNmax", "1", #how many map sites to write to output for each read
-                "--outMultimapperOrder", "Random", #assign read to random alignment if multimapper
-                "--outFilterType", "BySJout",
-            ]
-            return Popen(command, stderr=self.stdout, stdout=self.stdout,
-                         preexec_fn=os.setsid)
+        self.stdout.write("\n\nAlign to genome\n"+"".join(["-"]*20)+"\n\n")
+        self.stdout.flush()
+        if self.star_reporter_dir:
+            previous_aligned_dir = output_dir+"reporter_aligned/"+self.prefix+"/"
         else:
-            return 0
+            previous_aligned_dir = output_dir+"ncRNA_aligned/"+self.prefix+"/"
+        tx_aligned_dir = output_dir+"genome_aligned/"+self.prefix+"/"
+        if not os.access(tx_aligned_dir, os.F_OK):
+            os.mkdir(tx_aligned_dir)
+        command = [
+            "STAR",
+            "--runThreadN", str(self.numcores),
+            "--genomeDir", self.star_genome_dir,
+            "--readFilesIn", previous_aligned_dir+self.prefix+"_Unmapped.out.mate1",
+            "--outFileNamePrefix", tx_aligned_dir+self.prefix+"_",
+            "--outSAMtype", "BAM", "Unsorted",
+            "--outReadsUnmapped", "Fastx",
+            "--alignSJDBoverhangMin", "1",
+            "--alignSJoverhangMin", "8",
+            "--outFilterMultimapNmax", "1", #how many multimap sites allowed for read
+            "--outSAMmultNmax", "1", #how many map sites to write to output for each read
+            "--outMultimapperOrder", "Random", #assign read to random alignment if multimapper
+            "--outFilterType", "BySJout",
+        ]
+        return Popen(command, stderr=self.stdout, stdout=self.stdout,
+                     preexec_fn=os.setsid)
+            
     
     def samtools_sort(self, input_dir, numcores):
         '''Sort BAM file from STAR ouput.
         '''
-        if self.killflag == False and self.current_step == self.steps.index("sort_"+input_dir)-1:
-            self.stdout.write("\n\nSort "+input_dir+" BAM file\n"+"".join(["-"]*20)+"\n\n")
-            self.stdout.flush()
-            if input_dir == "reporter_aligned":
-                aligned_suffix = "_Aligned.out.plusstrand"
-            else:
-                aligned_suffix = "_Aligned.out"
-            return Popen([
-                "samtools",
-                "sort",
-                "-@", str(numcores),
-                self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".bam",
-                "-o", self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".sorted.bam"
-            ], stderr=self.stdout, stdout=self.stdout, preexec_fn=os.setsid)
+        self.stdout.write("\n\nSort "+input_dir+" BAM file\n"+"".join(["-"]*20)+"\n\n")
+        self.stdout.flush()
+        if input_dir == "reporter_aligned":
+            aligned_suffix = "_Aligned.out.plusstrand"
         else:
-            return 0
+            aligned_suffix = "_Aligned.out"
+        return Popen([
+            "samtools",
+            "sort",
+            "-@", str(numcores),
+            self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".bam",
+            "-o", self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".sorted.bam"
+        ], stderr=self.stdout, stdout=self.stdout, preexec_fn=os.setsid)
+            
     
     def samtools_index(self, input_dir, numcores):
         '''Index BAM file from STAR output
         '''
-        if self.killflag == False and self.current_step == self.steps.index("index_"+input_dir)-1:
-            self.stdout.write("\n\nIndex "+input_dir+" BAM file\n"+"".join(["-"]*20)+"\n\n")
-            self.stdout.flush()
-            if input_dir == "reporter_aligned":
-                aligned_suffix = "_Aligned.out.plusstrand"
-            else:
-                aligned_suffix = "_Aligned.out"
-            try:
-                os.remove(self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".bam",)
-            except FileNotFoundError:
-                pass
-            return Popen([
-                "samtools",
-                "index",
-                "-@", str(numcores),
-                self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".sorted.bam"
-            ], stderr=self.stdout, stdout=self.stdout, preexec_fn=os.setsid)
+        self.stdout.write("\n\nIndex "+input_dir+" BAM file\n"+"".join(["-"]*20)+"\n\n")
+        self.stdout.flush()
+        if input_dir == "reporter_aligned":
+            aligned_suffix = "_Aligned.out.plusstrand"
         else:
-            return 0
+            aligned_suffix = "_Aligned.out"
+        try:
+            os.remove(self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".bam",)
+        except FileNotFoundError:
+            pass
+        return Popen([
+            "samtools",
+            "index",
+            "-@", str(numcores),
+            self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+aligned_suffix+".sorted.bam"
+        ], stderr=self.stdout, stdout=self.stdout, preexec_fn=os.setsid)
+            
         
     def samtools_remove_rv_reads(self, input_dir, numcores):
         '''Remove reverse reads aligned to the reporter minus strand with samtools
         '''
-        if self.killflag == False and self.current_step == self.steps.index("remove_reverse_reads")-1:
+        if self.star_reporter_dir:
             self.stdout.write("\n\nRemove reporter reverse strand reads\n"+"".join(["-"]*20)+"\n\n")
             self.stdout.flush()
             return Popen([
@@ -413,10 +399,8 @@ class run_one_sample():
                 self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+"_Aligned.out.plusstrand.bam",
                 self.output_dir+input_dir+"/"+self.prefix+"/"+self.prefix+"_Aligned.out.bam"
             ], stderr=self.stdout, stdout=self.stdout, preexec_fn=os.setsid)
-        else:
-            return 0
+                
             
-        
         
     def check(self, proc):
         '''Poll Popen processes returned by each method to determine if a nonzero
@@ -426,30 +410,21 @@ class run_one_sample():
         '''
         global kill_pipeline
         global thread_tracker
-        try:
+        exit_code = proc.poll()
+        while exit_code == None:
+            sleep(1)
+            if kill_pipeline == True:
+                self.killflag = True
+            if self.killflag == True:
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             exit_code = proc.poll()
-            while exit_code == None:
-                exit_code = proc.poll()
-                sleep(1)
-                if kill_pipeline == True:
-                    self.killflag = True
-                if self.killflag == True:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            else:
-                if exit_code != 0:
-                    self.killflag = True
-                    kill_pipeline = True
-                else:
-                    self.current_step += 1
-                    self.completion.write(self.steps[self.current_step]+"\n")
-                    thread_tracker[self.prefix] = self.steps[self.current_step]
-                    self.completion.flush()
-        except (AttributeError, ProcessLookupError): 
-            #necessary to catch errors from methods returning 0 if self.killflag = True
-            pass
+        else:
+            if exit_code != 0:
+                self.killflag = True
+                kill_pipeline = True
 
 
-# In[178]:
+# In[58]:
 
 
 start_time = time()
@@ -513,6 +488,7 @@ try:
             print("Run terminated. Check for errors")
 except:
     kill_pipeline = True  #allows KeyboardInterrupt to kill pipeline
+    print("Run terminated. Check for errors")
     raise
 
     
@@ -526,7 +502,7 @@ else:
     print("Run time:", secs, "seconds")
 
 
-# In[ ]:
+# In[59]:
 
 
 def read_fate(sample_name):
